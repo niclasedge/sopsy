@@ -1,0 +1,12 @@
+# build output
+/dist/
+/sopsy
+/sopsy.exe
+*.test
+coverage.out
+
+# never commit real keys or decrypted files
+keys.txt
+*.dec
+*.plain
+.env

@@ -1,0 +1,17 @@
+schema: spec-driven
+
+context: |
+  sopsy: single Go binary (macOS, Linux, Windows) - CLI plus local web UI - for a
+  SOPS + age encrypted dotenv file. SOPS and age are compiled in as Go libraries;
+  no external sops/age binaries are required or called. Files must stay 100 %
+  SOPS-compatible. Overall approved design: docs/design.md.
+  Hard rules: sopsy never prints a secret value (stdout, stderr, logs, HTTP
+  responses); secret values never travel in argv; errors are loud, never a silent
+  fallback; sopsy's own failures exit 125 (env(1) convention).
+  Tech: Go, net/http + html/template + go:embed (no JS framework), goreleaser.
+  Code and comments in English. License Apache-2.0.
+
+rules:
+  tasks:
+    - Every task names its verification (test name, command, or observable behavior)
+    - Tests run on ubuntu, macos and windows in CI
