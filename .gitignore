@@ -10,3 +10,6 @@ keys.txt
 *.dec
 *.plain
 .env
+
+# local session logs
+/logs/
