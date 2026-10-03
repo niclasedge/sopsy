@@ -42,3 +42,18 @@ Overall design: `docs/design.md`.
   keeps group access via KMS/Vault possible later without code changes.
 - [`os.UserConfigDir` differs from what users expect on macOS] → the `~/.config`
   lookup step covers existing setups; `init` writes to the SOPS default.
+
+## Implementation notes
+
+- **Custom in-process key service.** The SOPS `keyservice` local client is used
+  with a custom server (`internal/store/keyservice.go`) that only handles age and
+  only the identities found by `internal/keys`. The stock server would load
+  identities from `SOPS_AGE_KEY`, `SOPS_AGE_KEY_CMD` and `~/.ssh` on its own — a
+  silent second key lookup that contradicts the lookup order in the spec.
+- **macOS default key location honours `$XDG_CONFIG_HOME`**, as SOPS does, so a
+  bare `sops` finds a key created by `sopsy init`.
+- **CRLF tolerated on read.** A Windows checkout with `core.autocrlf` turns the
+  committed file into CRLF, which the SOPS dotenv parser cannot read. The MAC
+  covers values, not line endings, so CRLF is read as LF.
+- **Malformed lines are reported before the SOPS parser runs**, because its
+  error message quotes the offending line.
