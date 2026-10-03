@@ -1,0 +1,13 @@
+{{define "content"}}
+<h1>{{.Data.Title}}</h1>
+<div class="message error">
+{{range .Data.Warning}}<p>{{.}}</p>{{end}}
+</div>
+<form method="post" action="{{.Data.Action}}">
+{{template "csrf" .CSRF}}
+<input type="hidden" name="{{.Data.Field}}" value="{{.Data.Value}}">
+<input type="hidden" name="confirm" value="yes">
+<button class="danger">Yes, continue</button>
+<a href="{{.Data.Back}}">Cancel</a>
+</form>
+{{end}}

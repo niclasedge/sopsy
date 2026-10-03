@@ -1,0 +1,34 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sopsy</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/copy.js" defer></script>
+</head>
+<body>
+<header>
+<strong class="brand">sopsy</strong>
+<nav>
+<a href="/setup"{{if eq .Nav "setup"}} aria-current="page"{{end}}>Setup</a>
+<a href="/keys"{{if eq .Nav "keys"}} aria-current="page"{{end}}>Keys</a>
+<a href="/recipients"{{if eq .Nav "recipients"}} aria-current="page"{{end}}>Recipients</a>
+<a href="/retrieve"{{if eq .Nav "retrieve"}} aria-current="page"{{end}}>Retrieve</a>
+</nav>
+<p class="file">{{.File}}</p>
+</header>
+<main>
+{{with .Flash}}{{template "message" .}}{{end}}
+{{template "content" .}}
+</main>
+</body>
+</html>
+{{end}}
+
+{{define "message"}}<div class="message{{if .Error}} error{{end}}" role="status">
+<p>{{.Text}}</p>
+{{with .Lines}}<ul>{{range .}}<li>{{.}}</li>{{end}}</ul>{{end}}
+</div>{{end}}
+
+{{define "csrf"}}<input type="hidden" name="csrf" value="{{.}}">{{end}}

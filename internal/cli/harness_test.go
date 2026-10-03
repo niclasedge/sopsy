@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -24,6 +25,9 @@ type world struct {
 	// prompt, when set, makes stdin a terminal: each hidden-prompt read
 	// calls it with the prompt text.
 	prompt func(string) (string, error)
+	// browser receives the URL `sopsy ui` opens; tests never start a real
+	// browser.
+	browser func(string) error
 }
 
 type result struct {
@@ -49,6 +53,12 @@ func (w *world) env() Env {
 		Environ:    w.environ,
 		Keys:       keys.Env{GOOS: runtime.GOOS, Home: w.home, Getenv: getenv},
 		ReadSecret: w.prompt,
+		OpenBrowser: func(url string) error {
+			if w.browser == nil {
+				return errors.New("no browser in tests")
+			}
+			return w.browser(url)
+		},
 	}
 }
 

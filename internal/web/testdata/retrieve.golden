@@ -1,0 +1,28 @@
+## bash / zsh
+sopsy run --file '/srv/project/secrets.env' -- ./deploy.sh
+sopsy run --file '/srv/project/secrets.env' -- sh -c 'curl -fsS -H "Authorization: Bearer $API_TOKEN" https://api.example.com/'
+# The command gets every key as an environment variable, e.g. $API_TOKEN.
+## PowerShell
+sopsy run --file '/srv/project/secrets.env' -- pwsh -NoProfile -File .\deploy.ps1
+# Inside the script: $env:API_TOKEN
+## cmd
+sopsy run --file "/srv/project/secrets.env" -- cmd /c deploy.bat
+# Inside the batch file: %API_TOKEN%
+## cron
+*/15 * * * * cd '/srv/project' && SOPS_AGE_KEY_FILE='/srv/home/.config/sops/age/keys.txt' '/usr/local/bin/sopsy' run --file '/srv/project/secrets.env' -- ./job.sh
+# cron does not read your shell profile, so the line uses absolute paths and names the key file.
+
+## bash / zsh
+sopsy run --file '/srv/it'\''s 100%/secrets.env' -- ./deploy.sh
+sopsy run --file '/srv/it'\''s 100%/secrets.env' -- sh -c 'curl -fsS -H "Authorization: Bearer $API_TOKEN" https://api.example.com/'
+# The command gets every key as an environment variable, e.g. $API_TOKEN.
+## PowerShell
+sopsy run --file '/srv/it''s 100%/secrets.env' -- pwsh -NoProfile -File .\deploy.ps1
+# Inside the script: $env:API_TOKEN
+## cmd
+sopsy run --file "/srv/it's 100%/secrets.env" -- cmd /c deploy.bat
+# Inside the batch file: %API_TOKEN%
+## cron
+*/15 * * * * cd '/srv/it'\''s 100\%' && 'sopsy' run --file '/srv/it'\''s 100\%/secrets.env' -- ./job.sh
+# cron does not read your shell profile, so the line uses absolute paths and names the key file.
+

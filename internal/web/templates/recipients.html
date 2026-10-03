@@ -1,0 +1,36 @@
+{{define "content"}}
+<h1>Recipients</h1>
+<p>Every recipient's age key can decrypt the secrets file.</p>
+
+{{with .Data.Own}}
+<h2>This machine</h2>
+<p><code id="own-key">{{.}}</code> <button type="button" data-copy="own-key">Copy</button></p>
+<p class="hint">Send this public key to someone who can already decrypt the file; they add it here or with
+<code>sopsy recipients add</code>. It is not secret.</p>
+<p class="cli">CLI: <code>sopsy pubkey</code></p>
+{{end}}
+
+<h2>Who can decrypt</h2>
+{{with .Data.Err}}{{template "message" .}}{{else}}
+<ul class="recipients">
+{{range .Data.Recipients}}
+<li>
+<code>{{.Key}}</code>{{if .Mine}} <span class="badge">this machine</span>{{end}}
+<form method="post" action="/recipients/remove">
+{{template "csrf" $.CSRF}}
+<input type="hidden" name="recipient" value="{{.Key}}">
+<button class="danger">Remove</button>
+</form>
+</li>
+{{end}}
+</ul>
+
+<h2>Add a recipient</h2>
+<form method="post" action="/recipients/add" class="value">
+{{template "csrf" .CSRF}}
+<label>Age public key <input name="recipient" required autocomplete="off" spellcheck="false" placeholder="age1…"></label>
+<button class="primary">Add</button>
+</form>
+<p class="cli">CLI: <code>sopsy recipients</code> · <code>sopsy recipients add AGE_PUBLIC_KEY</code> · <code>sopsy recipients remove AGE_PUBLIC_KEY</code></p>
+{{end}}
+{{end}}

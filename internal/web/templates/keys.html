@@ -1,0 +1,47 @@
+{{define "content"}}
+<h1>Keys</h1>
+{{with .Data.Err}}{{template "message" .}}{{else}}
+<table class="keys">
+<thead><tr><th>Name</th><th>Value</th><th></th></tr></thead>
+<tbody>
+{{range .Data.Names}}
+<tr>
+<td><code>{{.}}</code></td>
+<td>set (never shown)</td>
+<td class="actions">
+<details>
+<summary>Replace</summary>
+<form method="post" action="/keys/set" class="value">
+{{template "csrf" $.CSRF}}
+<input type="hidden" name="name" value="{{.}}">
+<label>New value <input type="password" name="value" autocomplete="off" required></label>
+<label>Repeat <input type="password" name="confirm" autocomplete="off" required></label>
+<button>Save</button>
+</form>
+</details>
+<form method="post" action="/keys/delete">
+{{template "csrf" $.CSRF}}
+<input type="hidden" name="name" value="{{.}}">
+<button class="danger">Delete</button>
+</form>
+</td>
+</tr>
+{{else}}
+<tr><td colspan="3">No keys yet.</td></tr>
+{{end}}
+</tbody>
+</table>
+
+<h2>Add a key</h2>
+<form method="post" action="/keys/set" class="value">
+{{template "csrf" .CSRF}}
+<label>Name <input name="name" required pattern="[A-Za-z_][A-Za-z0-9_]*" autocomplete="off" spellcheck="false" placeholder="API_TOKEN"></label>
+<label>Value <input type="password" name="value" autocomplete="off" required></label>
+<label>Repeat value <input type="password" name="confirm" autocomplete="off" required></label>
+<button class="primary">Add</button>
+</form>
+<p class="hint">Values go straight into the encrypted file and are never shown again.
+Same names replace the old value.</p>
+<p class="cli">CLI: <code>sopsy set NAME</code> · <code>sopsy unset NAME</code> · <code>sopsy keys</code></p>
+{{end}}
+{{end}}
