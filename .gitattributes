@@ -1,0 +1,2 @@
+# Test fixtures are byte-exact; a CRLF conversion would break them.
+internal/testutil/testdata/** -text
