@@ -94,6 +94,7 @@ var commands = map[string]command{
 	"pubkey":     {"print this machine's age public key", runPubkey},
 	"recipients": {"list recipients; recipients add|remove AGE_PUBLIC_KEY", runRecipients},
 	"doctor":     {"check key, permissions, config, recipients and decryption", runDoctor},
+	"version":    {"print version, commit and build date", runVersion},
 }
 
 // Run executes one sopsy invocation and returns its exit code.

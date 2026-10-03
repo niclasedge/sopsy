@@ -90,13 +90,16 @@ main.go                  wires internal/cli only
 internal/cli             commands, flags, exit codes, error → hint mapping
 internal/keys            age key lookup per OS, load, generate
 internal/sopsconfig      find/read/edit .sops.yaml (yaml.Node)
-internal/store           load, decrypt, encrypt, atomic write of the secrets file
+internal/store           load, decrypt, encrypt, recipients of the secrets file
+internal/atomicfile      temp file + rename, shared by store and sopsconfig
 internal/setup           the idempotent steps of `sopsy init` (CLI and UI)
+internal/runner          process start, environment merge, signal forwarding
+internal/doctor          the check list behind `sopsy doctor` (CLI and UI)
 internal/testutil        fixtures, test-only key, no-secret assertion, sops CLI helpers
+build/                   THIRD_PARTY_LICENSES generator used by goreleaser
 ```
 
-Later changes add `internal/runner` (process start, signals), `internal/doctor`
-(check list) and `internal/web` (UI). Platform-specific code lives in
+`internal/web` (UI) follows with `add-web-ui`. Platform-specific code lives in
 `_unix.go` / `_windows.go` files with build tags, never in runtime `if`s where
 a build tag fits.
 
@@ -119,6 +122,18 @@ a build tag fits.
   never commit any other private key.
 - Prefer table tests; test behaviour through the CLI where the spec describes
   CLI behaviour, and through the package where it describes package behaviour.
+
+## Releasing
+
+1. Dry run locally: `goreleaser release --snapshot --clean` — six archives in
+   `dist/`, each with `LICENSE` and `THIRD_PARTY_LICENSES`.
+2. Tag a green `main` commit: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+   Tags with a suffix (`v0.1.0-rc.1`) become GitHub pre-releases.
+3. `release.yml` runs goreleaser; check the assets against `checksums.txt`.
+
+Version, commit and date reach `sopsy version` via `-ldflags -X` on
+`internal/cli`; plain `go build` prints `dev`. Pushing a tag publishes a
+release — only with explicit approval.
 
 ## Public-repo hygiene
 
