@@ -62,6 +62,10 @@ func explain(err error) *Error {
 		return &Error{Msg: "no " + sopsconfig.FileName + " in this directory or any parent", Hint: []string{
 			"run `sopsy init` to create one",
 		}}
+	case errors.Is(err, store.ErrChanged):
+		return &Error{Msg: err.Error() + " while sopsy was working; nothing was written", Hint: []string{
+			"run the command again",
+		}}
 	case errors.Is(err, store.ErrNotEncrypted):
 		return &Error{Msg: err.Error(), Hint: []string{
 			"sopsy only works with files encrypted by sops or sopsy",
