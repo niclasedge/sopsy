@@ -267,3 +267,39 @@ func TestEditAliasedListRefused(t *testing.T) {
 		t.Fatal("Add edited a list defined through an alias")
 	}
 }
+
+func TestEditKeepsCRLF(t *testing.T) {
+	input, err := os.ReadFile(filepath.Join("testdata", "team.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := os.ReadFile(filepath.Join("testdata", "team.add.golden"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	crlf := func(b []byte) string { return strings.ReplaceAll(string(b), "\n", "\r\n") }
+	dir := t.TempDir()
+	path := filepath.Join(dir, FileName)
+	write(t, path, crlf(input))
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rule, err := c.RuleFor(filepath.Join(dir, "secrets.env"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := rule.Add("age1dave"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != crlf(want) {
+		t.Fatalf("got:\n%q\nwant:\n%q", got, crlf(want))
+	}
+}

@@ -73,6 +73,8 @@ func Create(path, secretsFile, recipient string) error {
 type Config struct {
 	Path string
 	doc  yaml.Node
+	// crlf records CRLF line endings so Save writes them back.
+	crlf bool
 }
 
 // Load parses the config file at path.
@@ -81,7 +83,10 @@ func Load(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}
-	c := &Config{Path: path}
+	// yaml.v3 mangles comments in CRLF input (e.g. a Windows checkout), so
+	// parse LF and restore the line endings on Save.
+	c := &Config{Path: path, crlf: bytes.Contains(data, []byte("\r\n"))}
+	data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
 	if err := yaml.Unmarshal(data, &c.doc); err != nil {
 		return nil, fmt.Errorf("%s is not valid YAML: %w", path, err)
 	}
@@ -229,11 +234,15 @@ func (c *Config) Save() error {
 	if err := enc.Close(); err != nil {
 		return err
 	}
+	data := buf.Bytes()
+	if c.crlf {
+		data = bytes.ReplaceAll(data, []byte("\n"), []byte("\r\n"))
+	}
 	info, err := os.Stat(c.Path)
 	if err != nil {
 		return err
 	}
-	return atomicfile.Write(c.Path, buf.Bytes(), info.Mode().Perm())
+	return atomicfile.Write(c.Path, data, info.Mode().Perm())
 }
 
 func root(doc *yaml.Node) *yaml.Node {
