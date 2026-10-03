@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 
+	"golang.org/x/term"
+
 	"github.com/niclasedge/sopsy/internal/keys"
 )
 
@@ -38,6 +40,9 @@ type Env struct {
 	Dir    string
 	Getenv func(string) string
 	Keys   keys.Env
+	// ReadSecret reads one line from the terminal without echo. It is nil
+	// when stdin is not a terminal; values are then read from Stdin.
+	ReadSecret func(prompt string) (string, error)
 }
 
 // Main runs sopsy for the current process and returns its exit code.
@@ -48,13 +53,28 @@ func Main() int {
 		return ExitFail
 	}
 	return Run(Env{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		Dir:    dir,
-		Getenv: os.Getenv,
-		Keys:   keys.OSEnv(),
+		Stdin:      os.Stdin,
+		Stdout:     os.Stdout,
+		Stderr:     os.Stderr,
+		Dir:        dir,
+		Getenv:     os.Getenv,
+		Keys:       keys.OSEnv(),
+		ReadSecret: terminalReader(),
 	}, os.Args[1:])
+}
+
+// terminalReader returns a hidden-input reader when stdin is a terminal.
+func terminalReader() func(string) (string, error) {
+	fd := int(os.Stdin.Fd()) //nolint:gosec // file descriptors fit in an int
+	if !term.IsTerminal(fd) {
+		return nil
+	}
+	return func(prompt string) (string, error) {
+		_, _ = fmt.Fprint(os.Stderr, prompt)
+		b, err := term.ReadPassword(fd)
+		_, _ = fmt.Fprintln(os.Stderr)
+		return string(b), err
+	}
 }
 
 type command struct {
@@ -63,7 +83,10 @@ type command struct {
 }
 
 var commands = map[string]command{
-	"init": {"create age key, .sops.yaml and secrets file (only what is missing)", runInit},
+	"init":  {"create age key, .sops.yaml and secrets file (only what is missing)", runInit},
+	"set":   {"set a key; value from the hidden prompt or stdin, never argv", runSet},
+	"unset": {"remove a key", runUnset},
+	"keys":  {"list key names (no key needed, values never shown)", runKeys},
 }
 
 // Run executes one sopsy invocation and returns its exit code.

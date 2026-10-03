@@ -21,6 +21,9 @@ type world struct {
 	dir   string
 	vars  map[string]string
 	stdin string
+	// prompt, when set, makes stdin a terminal: each hidden-prompt read
+	// calls it with the prompt text.
+	prompt func(string) (string, error)
 }
 
 type result struct {
@@ -40,10 +43,11 @@ func newWorld(t *testing.T) *world {
 func (w *world) env() Env {
 	getenv := func(k string) string { return w.vars[k] }
 	return Env{
-		Stdin:  strings.NewReader(w.stdin),
-		Dir:    w.dir,
-		Getenv: getenv,
-		Keys:   keys.Env{GOOS: runtime.GOOS, Home: w.home, Getenv: getenv},
+		Stdin:      strings.NewReader(w.stdin),
+		Dir:        w.dir,
+		Getenv:     getenv,
+		Keys:       keys.Env{GOOS: runtime.GOOS, Home: w.home, Getenv: getenv},
+		ReadSecret: w.prompt,
 	}
 }
 
@@ -63,6 +67,16 @@ func (w *world) run(args ...string) result {
 // useTestKey points the world at the committed test-only key.
 func (w *world) useTestKey() {
 	w.vars[keys.EnvKeyFile] = testutil.KeyFile()
+}
+
+// useFixture copies the sops-CLI-encrypted fixture to the default secrets
+// file and writes a matching .sops.yaml.
+func (w *world) useFixture() string {
+	w.t.Helper()
+	p := filepath.Join(w.dir, DefaultFile)
+	testutil.CopyFixture(w.t, p)
+	w.write(".sops.yaml", "creation_rules:\n  - age: "+testutil.PublicKey+"\n")
+	return p
 }
 
 func (w *world) write(name, content string) string {

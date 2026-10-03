@@ -4,6 +4,7 @@ package store
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -48,6 +49,9 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("%s line %d is not a KEY=VALUE line", e.Path, e.Line)
 }
 
+// ErrChanged means the file was modified on disk after it was read.
+var ErrChanged = errors.New("file changed on disk")
+
 // ErrNotEncrypted means the file has no SOPS metadata.
 var ErrNotEncrypted = errors.New("file is not encrypted with SOPS")
 
@@ -58,6 +62,9 @@ var dotenvStore = dotenv.NewStore(&config.DotenvStoreConfig{})
 type File struct {
 	Path string
 	tree sops.Tree
+	// hash and mode of the file as read, for change detection on write.
+	hash [sha256.Size]byte
+	mode fs.FileMode
 }
 
 // Load reads and parses an encrypted dotenv file without decrypting it.
@@ -66,6 +73,11 @@ func Load(path string) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	hash := sha256.Sum256(raw)
 	// A Windows checkout with core.autocrlf turns LF into CRLF. The MAC
 	// covers values, not line endings, so CRLF is read as LF.
 	raw = bytes.ReplaceAll(raw, []byte("\r\n"), []byte("\n"))
@@ -88,7 +100,7 @@ func Load(path string) (*File, error) {
 		return nil, err
 	}
 	tree.FilePath = abs
-	return &File{Path: path, tree: tree}, nil
+	return &File{Path: path, tree: tree, hash: hash, mode: info.Mode().Perm()}, nil
 }
 
 // Names returns the key names in file order.
