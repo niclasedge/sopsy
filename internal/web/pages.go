@@ -331,10 +331,20 @@ func (s *Server) recipientsPage(w http.ResponseWriter, _ *http.Request) {
 	s.render(w, "recipients", "recipients", data)
 }
 
+// errBadRecipient replaces the store's message, which quotes the input: a
+// private key pasted by mistake must not be echoed back.
+var errBadRecipient = errors.New("not a valid age public key: it starts with age1; get it with `sopsy pubkey` " +
+	"on the machine that should decrypt; nothing changed")
+
 func (s *Server) recipientAdd(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	o, err := recipients.Add(s.cfg.Keys, s.cfg.Dir, s.cfg.SecretsFile, r.PostForm.Get("recipient"))
+	key := r.PostForm.Get("recipient")
+	if store.ValidateRecipient(key) != nil {
+		s.done(w, r, "/recipients", failure(errBadRecipient))
+		return
+	}
+	o, err := recipients.Add(s.cfg.Keys, s.cfg.Dir, s.cfg.SecretsFile, key)
 	switch {
 	case err != nil:
 		s.done(w, r, "/recipients", failure(err))
@@ -347,6 +357,12 @@ func (s *Server) recipientAdd(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) recipientRemove(w http.ResponseWriter, r *http.Request) {
 	key := r.PostForm.Get("recipient")
+	if store.ValidateRecipient(key) != nil {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.done(w, r, "/recipients", failure(errBadRecipient))
+		return
+	}
 	if r.PostForm.Get("confirm") != "yes" {
 		s.render(w, "confirm", "recipients", confirmation{
 			Title: "Remove this recipient?", Action: "/recipients/remove", Field: "recipient", Value: key, Back: "/recipients",

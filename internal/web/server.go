@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/niclasedge/sopsy/internal/keys"
@@ -58,8 +59,11 @@ type Server struct {
 	// token is the secret in the printed URL; session is the cookie value it
 	// is exchanged for; csrf is the per-session form token.
 	token, session, csrf string
-	activity             chan struct{}
-	pages                map[string]*page
+	// tokenUsed makes the URL token single-use: the URL also appears in the
+	// process arguments of the browser, which other local users can read.
+	tokenUsed atomic.Bool
+	activity  chan struct{}
+	pages     map[string]*page
 
 	// mu serializes file changes and guards flash.
 	mu    sync.Mutex
@@ -178,13 +182,14 @@ func (w *statusWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-// logRequests logs method, path and status — never the query string (it
-// can hold the token) and never the body (it can hold a value).
+// logRequests logs method, escaped path and status — never the query string
+// (it can hold the token) and never the body (it can hold a value). The
+// escaped path cannot break the line.
 func (s *Server) logRequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(sw, r)
-		s.log.Printf("%s %s %d", r.Method, r.URL.Path, sw.status)
+		s.log.Printf("%s %s %d", r.Method, r.URL.EscapedPath(), sw.status)
 	})
 }
 
@@ -206,31 +211,40 @@ func (s *Server) cookieName() string { return "sopsy_" + strconv.Itoa(s.port) }
 
 func equal(a, b string) bool { return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1 }
 
-// authenticate exchanges the URL token for a session cookie (and redirects
-// to / so the token leaves the address bar), or requires that cookie.
+// authenticate exchanges the single-use URL token for a session cookie (and
+// redirects to / so the token leaves the address bar), or requires that
+// cookie.
 func (s *Server) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if t := r.URL.Query().Get("t"); t != "" {
-			if r.Method != http.MethodGet || !equal(t, s.token) {
+		c, err := r.Cookie(s.cookieName())
+		signedIn := err == nil && equal(c.Value, s.session)
+		if r.URL.Query().Has("t") {
+			switch {
+			case r.Method != http.MethodGet:
 				http.Error(w, "forbidden: invalid token", http.StatusForbidden)
 				return
+			case signedIn:
+				// The link opened again in the browser that already used it.
+			case !equal(r.URL.Query().Get("t"), s.token) || !s.tokenUsed.CompareAndSwap(false, true):
+				http.Error(w, "forbidden: invalid or already used link; restart `sopsy ui` for a new one", http.StatusForbidden)
+				return
+			default:
+				// No Secure flag: the UI is plain HTTP on loopback, where a
+				// Secure cookie would not be stored by every browser.
+				http.SetCookie(w, &http.Cookie{ //nolint:gosec // see above
+					Name:     s.cookieName(),
+					Value:    s.session,
+					Path:     "/",
+					HttpOnly: true,
+					SameSite: http.SameSiteStrictMode,
+				})
 			}
-			// No Secure flag: the UI is plain HTTP on loopback, where a Secure
-			// cookie would not be stored by every browser.
-			http.SetCookie(w, &http.Cookie{ //nolint:gosec // see above
-				Name:     s.cookieName(),
-				Value:    s.session,
-				Path:     "/",
-				HttpOnly: true,
-				SameSite: http.SameSiteStrictMode,
-			})
 			s.touch()
 			// Always /, never the request path: //host would be an open redirect.
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
-		c, err := r.Cookie(s.cookieName())
-		if err != nil || !equal(c.Value, s.session) {
+		if !signedIn {
 			http.Error(w, "forbidden: open the URL printed by `sopsy ui`", http.StatusForbidden)
 			return
 		}

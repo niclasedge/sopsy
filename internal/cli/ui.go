@@ -53,7 +53,8 @@ func runUI(env Env, args []string) error {
 	}
 
 	_, _ = fmt.Fprintf(env.Stdout, "sopsy ui running at\n  %s\n"+
-		"Only this machine can connect. Ctrl+C stops it; it also stops after %s without requests.\n", srv.URL(), *idle)
+		"Only this machine can connect, and the link works once. Ctrl+C stops it;\n"+
+		"it also stops after %s without requests.\n", srv.URL(), *idle)
 	open := env.OpenBrowser
 	if open == nil {
 		open = web.OpenBrowser

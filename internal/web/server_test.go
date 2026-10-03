@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -66,8 +67,15 @@ func TestTokenExchange(t *testing.T) {
 	}
 	u.cookie = c
 	wantStatus(t, u.get("/keys"), http.StatusOK)
-	// The printed URL keeps working for reopening the tab.
+	// The browser that used the link may open it again.
 	wantStatus(t, u.get("/?t="+u.s.token), http.StatusSeeOther)
+	// Anyone else gets nothing: the link works once.
+	u.cookie = nil
+	r = u.get("/?t=" + u.s.token)
+	wantStatus(t, r, http.StatusForbidden)
+	if len(r.Result().Cookies()) > 0 {
+		t.Error("a used token handed out a session cookie")
+	}
 }
 
 func TestTokenIs128Bits(t *testing.T) {
@@ -235,10 +243,13 @@ func TestIdleShutdown(t *testing.T) {
 
 func TestRequestsKeepServerAlive(t *testing.T) {
 	s, done, _ := serve(t, 300*time.Millisecond)
-	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	page := s.URL()
 	for range 5 {
 		time.Sleep(150 * time.Millisecond)
-		resp, err := client.Get(s.URL())
+		resp, err := client.Get(page)
+		page = strings.Split(s.URL(), "?")[0] + "static/style.css"
 		if err != nil {
 			t.Fatalf("server stopped while in use: %v", err)
 		}
@@ -275,5 +286,16 @@ func TestTokenRedirectStaysLocal(t *testing.T) {
 	wantStatus(t, r, http.StatusSeeOther)
 	if loc := r.Header().Get("Location"); loc != "/" {
 		t.Fatalf("redirect to %q, want /", loc)
+	}
+}
+
+func TestLogEscapesPath(t *testing.T) {
+	u := newUI(t)
+	u.login()
+	u.get("/keys%0aforged%20line")
+	for _, line := range strings.Split(u.log.String(), "\n") {
+		if strings.HasPrefix(line, "forged") {
+			t.Fatalf("a request path forged a log line:\n%s", u.log.String())
+		}
 	}
 }

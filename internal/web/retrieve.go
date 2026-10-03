@@ -3,6 +3,8 @@ package web
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/niclasedge/sopsy/internal/store"
 )
 
 // exampleInput is what the Retrieve page's commands are built from.
@@ -19,9 +21,14 @@ type example struct {
 }
 
 func examples(in exampleInput) []example {
+	// Only a valid name goes into the commands: the file is not trusted to
+	// hold names that are safe inside shell quotes.
 	name := "API_TOKEN"
-	if len(in.Names) > 0 {
-		name = in.Names[0]
+	for _, n := range in.Names {
+		if store.ValidateName(n) == nil {
+			name = n
+			break
+		}
 	}
 	exe := in.Executable
 	if exe == "" {
