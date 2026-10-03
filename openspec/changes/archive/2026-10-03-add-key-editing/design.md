@@ -33,3 +33,12 @@ guarantees here apply to both.
   human-driven tool, documented.
 - [Values with embedded newlines] → the SOPS dotenv store cannot represent them;
   reject with a clear error instead of corrupting the file.
+
+## Implementation notes
+
+- Key names starting with `sops_` are rejected: SOPS reads every `sops_*`
+  entry of a dotenv file as metadata.
+- `\r` is rejected along with `\n`.
+- `set` decrypts before prompting, so a broken key setup fails before the user
+  types a value; the hash check covers the time spent typing.
+- Writes keep the file's mode and its line endings (LF or CRLF).
