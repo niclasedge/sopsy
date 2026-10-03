@@ -27,3 +27,18 @@ All checks reuse existing packages; this change adds only orchestration and outp
 
 - [Exit 1 vs. the 125 convention] → documented: 125 means sopsy could not run
   its checks at all, 1 means a check failed.
+
+## Implementation notes
+
+- Statuses are `ok`, `warn`, `fail`, `skipped` plus `info` for the external
+  tool lines, so "never `fail`" is visible in the data and not just a
+  convention of the printer.
+- The recipient check uses the secrets file's recipients when the file
+  exists (that is what decryption needs) and falls back to the `.sops.yaml`
+  rule before the first `sopsy set`.
+- The secrets file is loaded once and shared by the recipient, file and
+  decrypt checks.
+- `sops --version` runs with `SOPS_DISABLE_VERSION_CHECK=1` and a 3 s timeout
+  so doctor never waits on the network.
+- Windows reports the key permission check as `ok` with a note that the
+  profile ACL applies (no portable ACL API, as decided above).
