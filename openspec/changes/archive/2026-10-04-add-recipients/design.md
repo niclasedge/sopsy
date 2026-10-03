@@ -48,3 +48,6 @@ own recipient list in its metadata. Both have to change together.
 - A `.sops.yaml` rule with several `key_groups`, or an age list that is itself
   an alias (`age: *keys`), is refused with a message instead of edited.
 - File writes use `internal/atomicfile`, shared by the store and `.sops.yaml`.
+- `.sops.yaml` with CRLF line endings is parsed as LF and written back as
+  CRLF: yaml.v3 otherwise invents blank lines around comments (found by the
+  Windows CI job on a CRLF checkout).
