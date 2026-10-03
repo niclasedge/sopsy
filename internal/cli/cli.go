@@ -39,7 +39,9 @@ type Env struct {
 	// Dir is the working directory; relative paths resolve against it.
 	Dir    string
 	Getenv func(string) string
-	Keys   keys.Env
+	// Environ is the environment handed to child processes.
+	Environ func() []string
+	Keys    keys.Env
 	// ReadSecret reads one line from the terminal without echo. It is nil
 	// when stdin is not a terminal; values are then read from Stdin.
 	ReadSecret func(prompt string) (string, error)
@@ -58,6 +60,7 @@ func Main() int {
 		Stderr:     os.Stderr,
 		Dir:        dir,
 		Getenv:     os.Getenv,
+		Environ:    os.Environ,
 		Keys:       keys.OSEnv(),
 		ReadSecret: terminalReader(),
 	}, os.Args[1:])
@@ -87,6 +90,7 @@ var commands = map[string]command{
 	"set":   {"set a key; value from the hidden prompt or stdin, never argv", runSet},
 	"unset": {"remove a key", runUnset},
 	"keys":  {"list key names (no key needed, values never shown)", runKeys},
+	"run":   {"run a command with the secrets in its environment: sopsy run -- CMD", runRun},
 }
 
 // Run executes one sopsy invocation and returns its exit code.
