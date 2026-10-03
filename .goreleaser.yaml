@@ -1,0 +1,47 @@
+# Release build: six CGO-free targets, archives with license notices,
+# SHA-256 checksums. Runs from .github/workflows/release.yml on v* tags.
+# Local dry run: goreleaser release --snapshot --clean
+version: 2
+
+project_name: sopsy
+
+before:
+  hooks:
+    - go mod verify
+    - sh build/third-party-licenses.sh
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/niclasedge/sopsy/internal/cli.version={{ .Version }}
+      - -X github.com/niclasedge/sopsy/internal/cli.commit={{ .ShortCommit }}
+      - -X github.com/niclasedge/sopsy/internal/cli.date={{ .CommitDate }}
+    # Commit time instead of build time keeps the binaries reproducible.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - THIRD_PARTY_LICENSES
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  use: github-native
+
+release:
+  prerelease: auto

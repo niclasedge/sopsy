@@ -1,0 +1,15 @@
+THIRD-PARTY LICENSES
+
+This binary includes the Go packages listed below. Each entry names the
+package, the module version compiled in, its license and the full license
+text. The Go standard library and runtime follow at the end.
+{{ range . }}
+================================================================================
+{{ .Name }} {{ .Version }}
+License: {{ .LicenseName }} ({{ .LicenseURL }})
+{{- if eq .LicenseName "MPL-2.0" }}
+Source code of this version: https://pkg.go.dev/{{ .Name }}@{{ .Version }}
+{{- end }}
+
+{{ .LicenseText }}
+{{ end -}}
