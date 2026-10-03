@@ -1,0 +1,11 @@
+{{define "content"}}
+<h1>Retrieve</h1>
+<p>Programs get the secrets as environment variables through <code>sopsy run</code>; the values never touch a
+file or the command line.</p>
+{{range .Data}}
+<h2>{{.Shell}}</h2>
+<pre><code>{{range .Lines}}{{.}}
+{{end}}</code></pre>
+<p class="hint">{{.Note}}</p>
+{{end}}
+{{end}}

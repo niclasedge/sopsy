@@ -3,3 +3,4 @@ internal/testutil/testdata/** -text
 
 # Golden files are compared byte for byte.
 internal/sopsconfig/testdata/** -text
+internal/web/testdata/** -text

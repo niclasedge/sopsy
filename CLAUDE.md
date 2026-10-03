@@ -95,13 +95,15 @@ internal/atomicfile      temp file + rename, shared by store and sopsconfig
 internal/setup           the idempotent steps of `sopsy init` (CLI and UI)
 internal/runner          process start, environment merge, signal forwarding
 internal/doctor          the check list behind `sopsy doctor` (CLI and UI)
+internal/recipients      add/remove recipients in file and .sops.yaml (CLI and UI)
+internal/hint            error → message + fix steps (CLI and UI)
+internal/web             `sopsy ui`: server, security middleware, embedded pages
 internal/testutil        fixtures, test-only key, no-secret assertion, sops CLI helpers
 build/                   THIRD_PARTY_LICENSES generator used by goreleaser
 ```
 
-`internal/web` (UI) follows with `add-web-ui`. Platform-specific code lives in
-`_unix.go` / `_windows.go` files with build tags, never in runtime `if`s where
-a build tag fits.
+Platform-specific code lives in `_unix.go` / `_windows.go` (or `_darwin.go`)
+files with build tags, never in runtime `if`s where a build tag fits.
 
 ## Testing
 
@@ -120,6 +122,10 @@ a build tag fits.
 - **Test-only key:** `internal/testutil/testdata/test-only.agekey` is public on
   purpose and protects nothing but fixtures. Never use it for anything else and
   never commit any other private key.
+- **Web UI:** `internal/web` tests send requests straight to the handler
+  (`httptest`) and run every response body through `AssertNoSecret`; each
+  protection (Host check, session, CSRF, headers, log) has a test that fails
+  when the protection is removed.
 - Prefer table tests; test behaviour through the CLI where the spec describes
   CLI behaviour, and through the package where it describes package behaviour.
 

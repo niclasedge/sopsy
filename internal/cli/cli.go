@@ -45,6 +45,8 @@ type Env struct {
 	// ReadSecret reads one line from the terminal without echo. It is nil
 	// when stdin is not a terminal; values are then read from Stdin.
 	ReadSecret func(prompt string) (string, error)
+	// OpenBrowser opens a URL for `sopsy ui`; nil means the system browser.
+	OpenBrowser func(url string) error
 }
 
 // Main runs sopsy for the current process and returns its exit code.
@@ -95,6 +97,7 @@ var commands = map[string]command{
 	"recipients": {"list recipients; recipients add|remove AGE_PUBLIC_KEY", runRecipients},
 	"doctor":     {"check key, permissions, config, recipients and decryption", runDoctor},
 	"version":    {"print version, commit and build date", runVersion},
+	"ui":         {"open the guided web UI on 127.0.0.1", runUI},
 }
 
 // Run executes one sopsy invocation and returns its exit code.

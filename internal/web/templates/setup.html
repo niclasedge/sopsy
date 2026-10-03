@@ -1,0 +1,43 @@
+{{define "content"}}
+<h1>Setup</h1>
+<p>Three steps make this machine ready. Each creates only what is missing.</p>
+<ol class="steps">
+{{range .Data.Steps}}
+<li class="{{if .Done}}ok{{else}}missing{{end}}">
+<h2>{{.Name}}</h2>
+{{if .Done}}
+<p>present: <code>{{.Path}}</code></p>
+{{else}}
+<p>missing{{with .Path}} — will be created at <code>{{.}}</code>{{end}}</p>
+<form method="post" action="{{.Action}}">
+{{template "csrf" $.CSRF}}
+<button{{if .Blocked}} disabled{{end}}>Create {{.Name}}</button>
+{{with .Blocked}}<span class="hint">{{.}}</span>{{end}}
+</form>
+{{end}}
+<p class="cli">CLI: <code>{{$.Data.Command}}</code></p>
+</li>
+{{end}}
+</ol>
+{{if .Data.Missing}}
+<form method="post" action="/setup/all">
+{{template "csrf" .CSRF}}
+<button class="primary">Create everything missing</button>
+</form>
+{{end}}
+
+<h2>Checks</h2>
+<table class="checks">
+<thead><tr><th>Status</th><th>Check</th><th>Detail</th></tr></thead>
+<tbody>
+{{range .Data.Checks}}
+<tr class="{{.Status}}">
+<td><span class="status">{{.Status}}</span></td>
+<td>{{.Name}}</td>
+<td>{{.Detail}}{{with .Fix}}<br><span class="hint">fix: {{.}}</span>{{end}}</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+<p class="cli">CLI: <code>sopsy doctor</code></p>
+{{end}}

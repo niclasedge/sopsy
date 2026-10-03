@@ -3,13 +3,14 @@
 Set and use secrets from a [SOPS](https://github.com/getsops/sops) + [age](https://age-encryption.org/)
 encrypted dotenv file — one binary for macOS, Linux and Windows, with a guided local web UI.
 
-> **Status: pre-release.** The CLI is implemented; the web UI (`sopsy ui`) is in progress.
+> **Status: pre-release.** All v1 features are implemented; the first release is being prepared.
 > See [`docs/design.md`](docs/design.md) and the [issues](https://github.com/niclasedge/sopsy/issues).
 
 ## Usage
 
 ```bash
 sopsy init                         # create age key, .sops.yaml and secrets.env (only what is missing)
+sopsy ui                           # guided web UI on 127.0.0.1 — set values without a terminal
 sopsy set GITHUB_TOKEN             # hidden prompt, asked twice
 printf '%s' "$TOKEN" | sopsy set GITHUB_TOKEN   # or from stdin; never as an argument
 sopsy keys                         # names only, never values
@@ -35,6 +36,15 @@ sopsy recipients remove age1...    # revoke; then rotate every value
 - Files stay fully SOPS-compatible; the regular `sops` CLI keeps working.
 - sopsy never prints a secret value.
 - `sopsy run` exits with the command's exit code; 125 means sopsy itself failed.
+
+### Web UI
+
+`sopsy ui` serves a local page on `127.0.0.1` and opens it in your browser:
+guided setup, keys (set, replace, delete — values are write-only), recipients and
+copy-paste examples for bash/zsh, PowerShell, cmd and cron. Only this machine can
+connect; the link carries a one-time token, the page sends no value back, and the
+server stops after 15 minutes without requests (`--idle`). The link is printed
+too, in case no browser opens.
 
 ## Install
 

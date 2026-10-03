@@ -2,10 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
-	"github.com/niclasedge/sopsy/internal/sopsconfig"
+	"github.com/niclasedge/sopsy/internal/recipients"
 	"github.com/niclasedge/sopsy/internal/store"
 )
 
@@ -62,150 +61,59 @@ func runRecipients(env Env, args []string) error {
 	return err
 }
 
-// recipientChange holds everything a recipient change touches, loaded and
-// validated before anything is written.
-type recipientChange struct {
-	recipient string
-	file      *store.File
-	config    *sopsconfig.Config
-	rule      *sopsconfig.Rule
-	inFile    bool
-	inConfig  bool
-	// configChanged is set once the rule was edited in memory.
-	configChanged bool
-}
-
-func loadRecipientChange(env Env, name string, args []string) (*recipientChange, error) {
+// recipientArgs parses `recipients add|remove [--file F] AGE_PUBLIC_KEY`.
+func recipientArgs(env Env, name string, args []string) (file, recipient string, err error) {
 	fs := flags(env, "recipients "+name)
-	file := fileFlag(fs)
+	f := fileFlag(fs)
 	if err := parse(fs, args); err != nil {
-		return nil, err
+		return "", "", err
 	}
 	if fs.NArg() != 1 {
-		return nil, &Error{Msg: name + " takes exactly one age public key", Hint: []string{
+		return "", "", &Error{Msg: name + " takes exactly one age public key", Hint: []string{
 			"usage: sopsy recipients " + name + " [--file F] AGE_PUBLIC_KEY",
 		}}
 	}
-	recipient := fs.Arg(0)
-	if err := store.ValidateRecipient(recipient); err != nil {
-		return nil, &Error{Msg: err.Error() + "; nothing changed", Hint: []string{
-			"an age public key starts with age1; get it with `sopsy pubkey` on the machine that should decrypt",
-		}}
-	}
-	secrets := env.secretsFile(*file)
-	f, err := store.Load(secrets)
-	if err != nil {
-		return nil, err
-	}
-	confPath, err := sopsconfig.Find(env.Dir)
-	if err != nil {
-		return nil, err
-	}
-	c, err := sopsconfig.Load(confPath)
-	if err != nil {
-		return nil, err
-	}
-	rule, err := c.RuleFor(secrets)
-	if err != nil {
-		return nil, err
-	}
-	return &recipientChange{
-		recipient: recipient,
-		file:      f,
-		config:    c,
-		rule:      rule,
-		inFile:    slices.Contains(f.Recipients(), recipient),
-		inConfig:  slices.Contains(rule.Recipients(), recipient),
-	}, nil
-}
-
-// apply writes the secrets file first and .sops.yaml second, so a failure
-// in between leaves a state the error message can describe exactly.
-func (ch *recipientChange) apply(env Env, add, remove []string, manual string) error {
-	if len(add)+len(remove) > 0 {
-		k, err := env.Keys.Load()
-		if err != nil {
-			return err
-		}
-		if err := ch.file.ChangeRecipients(k.Identities, k.Public, add, remove); err != nil {
-			return err
-		}
-	}
-	if !ch.configChanged {
-		return nil
-	}
-	if err := ch.config.Save(); err != nil {
-		return &Error{
-			Msg:  fmt.Sprintf("%s was updated, but %s could not be written: %v", ch.file.Path, ch.config.Path, err),
-			Hint: []string{manual},
-		}
-	}
-	return nil
+	return env.secretsFile(*f), fs.Arg(0), nil
 }
 
 func recipientsAdd(env Env, args []string) error {
-	ch, err := loadRecipientChange(env, "add", args)
+	file, recipient, err := recipientArgs(env, "add", args)
 	if err != nil {
 		return err
 	}
-	if ch.inFile && ch.inConfig {
-		_, err := fmt.Fprintf(env.Stdout, "%s is already a recipient; nothing changed\n", ch.recipient)
+	o, err := recipients.Add(env.Keys, env.Dir, file, recipient)
+	if err != nil {
 		return err
 	}
-	if !ch.inConfig {
-		if err := ch.rule.Add(ch.recipient); err != nil {
-			return err
-		}
-		ch.configChanged = true
-	}
-	var add []string
-	if !ch.inFile {
-		add = []string{ch.recipient}
-	}
-	manual := fmt.Sprintf("add %s to the age list in %s by hand", ch.recipient, ch.config.Path)
-	if err := ch.apply(env, add, nil, manual); err != nil {
+	if !o.Changed {
+		_, err := fmt.Fprintf(env.Stdout, "%s is already a recipient; nothing changed\n", o.Recipient)
 		return err
 	}
-	_, err = fmt.Fprintf(env.Stdout, "added %s\n  %s and %s updated\n", ch.recipient, ch.file.Path, ch.config.Path)
+	_, err = fmt.Fprintf(env.Stdout, "added %s\n  %s and %s updated\n", o.Recipient, o.File, o.Config)
 	return err
 }
 
 func recipientsRemove(env Env, args []string) error {
-	ch, err := loadRecipientChange(env, "remove", args)
+	file, recipient, err := recipientArgs(env, "remove", args)
 	if err != nil {
 		return err
 	}
-	if !ch.inFile && !ch.inConfig {
-		_, err := fmt.Fprintf(env.Stdout, "%s is not a recipient; nothing changed\n", ch.recipient)
+	o, err := recipients.Remove(env.Keys, env.Dir, file, recipient)
+	if err != nil {
 		return err
 	}
-	if ch.inConfig && len(ch.rule.Recipients()) == 1 {
-		return store.ErrLastRecipient
-	}
-	aliasKept := false
-	if ch.inConfig {
-		if _, aliasKept, err = ch.rule.Remove(ch.recipient); err != nil {
-			return err
-		}
-		ch.configChanged = true
-	}
-	var remove []string
-	if ch.inFile {
-		remove = []string{ch.recipient}
-	}
-	manual := fmt.Sprintf("remove %s from the age list in %s by hand", ch.recipient, ch.config.Path)
-	if err := ch.apply(env, nil, remove, manual); err != nil {
+	if !o.Changed {
+		_, err := fmt.Fprintf(env.Stdout, "%s is not a recipient; nothing changed\n", o.Recipient)
 		return err
 	}
-
 	var b strings.Builder
-	fmt.Fprintf(&b, "removed %s\n  %s and %s updated\n", ch.recipient, ch.file.Path, ch.config.Path)
-	if aliasKept {
-		fmt.Fprintf(&b, "  note: its anchor definition is still in %s; delete it by hand if nothing else uses it\n", ch.config.Path)
+	fmt.Fprintf(&b, "removed %s\n  %s and %s updated\n", o.Recipient, o.File, o.Config)
+	if o.AnchorKept {
+		fmt.Fprintf(&b, "  note: its anchor definition is still in %s; delete it by hand if nothing else uses it\n", o.Config)
 	}
 	b.WriteString("\nWARNING: rotate every value. The removed key could decrypt them until now,\n")
 	b.WriteString("and the old file stays readable in version control history. Keys to rotate:\n")
-	for _, name := range ch.file.Names() {
+	for _, name := range o.Names {
 		fmt.Fprintf(&b, "  %s\n", name)
 	}
 	_, err = fmt.Fprint(env.Stdout, b.String())
