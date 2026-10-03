@@ -1,0 +1,13 @@
+# Team recipients. Keep one key per line.
+keys:
+  - &alice age1alice # Alice's laptop
+  - &bob age1bob
+creation_rules:
+  # production secrets
+  - path_regex: prod\.env$
+    age:
+      - *alice
+  - path_regex: secrets\.env$
+    age:
+      - *alice # always first
+      - *bob

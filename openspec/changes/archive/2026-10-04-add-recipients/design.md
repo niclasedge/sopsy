@@ -33,3 +33,21 @@ own recipient list in its metadata. Both have to change together.
   alias reference and leaves the anchor definition, reported in the output.
 - [Removed recipient still has old ciphertext in git history] → cannot be fixed
   technically; rotation warning is mandatory output.
+
+## Implementation notes
+
+- `go.yaml.in/yaml/v3` (the maintained successor of `gopkg.in/yaml.v3`,
+  already in SOPS' module graph) is used for `yaml.Node` editing. Comments and
+  anchors survive; blank lines between top-level blocks do not (a yaml.v3
+  limitation), so `.sops.yaml` is only rewritten when its rule changes.
+- The secrets file is rewritten like `sops updatekeys`: only the `sops_age__*`
+  metadata lines change; value ciphertexts, `sops_lastmodified` and the MAC
+  stay byte-identical, which keeps the git diff minimal.
+- `add` and `remove` repair disagreement: a key present in only one of
+  `.sops.yaml` and the file is added to / removed from the other.
+- A `.sops.yaml` rule with several `key_groups`, or an age list that is itself
+  an alias (`age: *keys`), is refused with a message instead of edited.
+- File writes use `internal/atomicfile`, shared by the store and `.sops.yaml`.
+- `.sops.yaml` with CRLF line endings is parsed as LF and written back as
+  CRLF: yaml.v3 otherwise invents blank lines around comments (found by the
+  Windows CI job on a CRLF checkout).

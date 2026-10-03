@@ -66,6 +66,10 @@ func explain(err error) *Error {
 		return &Error{Msg: err.Error() + " while sopsy was working; nothing was written", Hint: []string{
 			"run the command again",
 		}}
+	case errors.Is(err, store.ErrLastRecipient):
+		return &Error{Msg: "refusing to remove the last recipient: nobody could decrypt the file any more; nothing changed", Hint: []string{
+			"add the new recipient first: sopsy recipients add AGE_PUBLIC_KEY",
+		}}
 	case errors.Is(err, store.ErrNotEncrypted):
 		return &Error{Msg: err.Error(), Hint: []string{
 			"sopsy only works with files encrypted by sops or sopsy",

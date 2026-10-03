@@ -20,6 +20,8 @@ import (
 	"github.com/getsops/sops/v3/stores"
 	"github.com/getsops/sops/v3/stores/dotenv"
 	"github.com/getsops/sops/v3/version"
+
+	"github.com/niclasedge/sopsy/internal/atomicfile"
 )
 
 // NotRecipientError means the loaded key cannot decrypt the file's data key.
@@ -213,7 +215,7 @@ func Create(path string, rule *config.Config) error {
 	if err != nil {
 		return err
 	}
-	return writeAtomic(path, data, 0o644)
+	return atomicfile.Write(path, data, 0o644)
 }
 
 // encrypt encrypts the tree in place, recomputes the MAC and returns the
@@ -231,31 +233,4 @@ func encrypt(tree *sops.Tree, dataKey []byte) ([]byte, error) {
 		return nil, fmt.Errorf("encrypting MAC: %w", err)
 	}
 	return dotenvStore.EmitEncryptedFile(*tree)
-}
-
-// writeAtomic replaces path with data via a temp file in the same directory,
-// so readers see either the old or the new file, never a partial one.
-func writeAtomic(path string, data []byte, mode fs.FileMode) (err error) {
-	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
-	if err != nil {
-		return fmt.Errorf("writing %s: %w", path, err)
-	}
-	defer func() {
-		if err != nil {
-			_ = os.Remove(tmp.Name())
-		}
-	}()
-	if _, err = tmp.Write(data); err == nil {
-		err = tmp.Sync()
-	}
-	if err = errors.Join(err, tmp.Close()); err != nil {
-		return fmt.Errorf("writing %s: %w", path, err)
-	}
-	if err = os.Chmod(tmp.Name(), mode); err != nil {
-		return fmt.Errorf("writing %s: %w", path, err)
-	}
-	if err = os.Rename(tmp.Name(), path); err != nil {
-		return fmt.Errorf("writing %s: %w", path, err)
-	}
-	return nil
 }

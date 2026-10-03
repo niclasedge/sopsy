@@ -3,15 +3,19 @@
 package sopsconfig
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/niclasedge/sopsy/internal/atomicfile"
 )
 
 // FileName is the only config file name sopsy recognises, as in SOPS.
@@ -69,6 +73,8 @@ func Create(path, secretsFile, recipient string) error {
 type Config struct {
 	Path string
 	doc  yaml.Node
+	// crlf records CRLF line endings so Save writes them back.
+	crlf bool
 }
 
 // Load parses the config file at path.
@@ -77,7 +83,10 @@ func Load(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}
-	c := &Config{Path: path}
+	// yaml.v3 mangles comments in CRLF input (e.g. a Windows checkout), so
+	// parse LF and restore the line endings on Save.
+	c := &Config{Path: path, crlf: bytes.Contains(data, []byte("\r\n"))}
+	data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
 	if err := yaml.Unmarshal(data, &c.doc); err != nil {
 		return nil, fmt.Errorf("%s is not valid YAML: %w", path, err)
 	}
@@ -89,6 +98,8 @@ type Rule struct {
 	// age is the node holding the age recipients: a sequence or a
 	// comma-separated scalar. nil when the rule has no age field.
 	age *yaml.Node
+	// parent is the mapping that holds (or will hold) the age field.
+	parent *yaml.Node
 }
 
 // RuleFor returns the first creation rule whose path_regex matches
@@ -129,18 +140,18 @@ func (c *Config) RuleFor(secretsFile string) (*Rule, error) {
 
 func ruleFrom(path string, r *yaml.Node) (*Rule, error) {
 	if age := mapValue(r, "age"); age != nil {
-		return &Rule{age: age}, nil
+		return &Rule{age: age, parent: r}, nil
 	}
 	groups := mapValue(r, "key_groups")
 	if groups == nil {
-		return &Rule{}, nil
+		return &Rule{parent: r}, nil
 	}
 	groups = resolve(groups)
 	if groups.Kind != yaml.SequenceNode || len(groups.Content) != 1 {
 		return nil, fmt.Errorf("%s: creation rules with several key_groups are not supported; edit the file with the sops CLI instead", path)
 	}
 	group := resolve(groups.Content[0])
-	return &Rule{age: mapValue(group, "age")}, nil
+	return &Rule{age: mapValue(group, "age"), parent: group}, nil
 }
 
 // Recipients returns the age recipients of the rule, with aliases resolved.
@@ -167,6 +178,71 @@ func splitScalar(s string) []string {
 		}
 	}
 	return out
+}
+
+// Add appends recipient to the rule's age recipients.
+func (r *Rule) Add(recipient string) error {
+	switch {
+	case r.age == nil:
+		r.age = &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+		r.parent.Content = append(r.parent.Content,
+			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "age"}, r.age)
+		fallthrough
+	case r.age.Kind == yaml.SequenceNode:
+		r.age.Content = append(r.age.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: recipient})
+	case r.age.Kind == yaml.ScalarNode:
+		r.age.Value = strings.Join(append(splitScalar(r.age.Value), recipient), ",")
+	default:
+		return errors.New("the age recipients are defined through an alias; edit " + FileName + " by hand")
+	}
+	return nil
+}
+
+// Remove deletes recipient from the rule's age recipients. aliasKept reports
+// that the entry was an alias whose anchor definition stays in the file.
+func (r *Rule) Remove(recipient string) (removed, aliasKept bool, err error) {
+	if r.age == nil {
+		return false, false, nil
+	}
+	switch r.age.Kind {
+	case yaml.ScalarNode:
+		parts := splitScalar(r.age.Value)
+		kept := slices.DeleteFunc(slices.Clone(parts), func(p string) bool { return p == recipient })
+		r.age.Value = strings.Join(kept, ",")
+		return len(kept) != len(parts), false, nil
+	case yaml.SequenceNode:
+		for i, item := range r.age.Content {
+			if resolve(item).Value == recipient {
+				r.age.Content = slices.Delete(r.age.Content, i, i+1)
+				return true, item.Kind == yaml.AliasNode, nil
+			}
+		}
+		return false, false, nil
+	default:
+		return false, false, errors.New("the age recipients are defined through an alias; edit " + FileName + " by hand")
+	}
+}
+
+// Save writes the config back, preserving comments and anchors.
+func (c *Config) Save() error {
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(&c.doc); err != nil {
+		return err
+	}
+	if err := enc.Close(); err != nil {
+		return err
+	}
+	data := buf.Bytes()
+	if c.crlf {
+		data = bytes.ReplaceAll(data, []byte("\n"), []byte("\r\n"))
+	}
+	info, err := os.Stat(c.Path)
+	if err != nil {
+		return err
+	}
+	return atomicfile.Write(c.Path, data, info.Mode().Perm())
 }
 
 func root(doc *yaml.Node) *yaml.Node {

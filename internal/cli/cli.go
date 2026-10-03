@@ -86,11 +86,13 @@ type command struct {
 }
 
 var commands = map[string]command{
-	"init":  {"create age key, .sops.yaml and secrets file (only what is missing)", runInit},
-	"set":   {"set a key; value from the hidden prompt or stdin, never argv", runSet},
-	"unset": {"remove a key", runUnset},
-	"keys":  {"list key names (no key needed, values never shown)", runKeys},
-	"run":   {"run a command with the secrets in its environment: sopsy run -- CMD", runRun},
+	"init":       {"create age key, .sops.yaml and secrets file (only what is missing)", runInit},
+	"set":        {"set a key; value from the hidden prompt or stdin, never argv", runSet},
+	"unset":      {"remove a key", runUnset},
+	"keys":       {"list key names (no key needed, values never shown)", runKeys},
+	"run":        {"run a command with the secrets in its environment: sopsy run -- CMD", runRun},
+	"pubkey":     {"print this machine's age public key", runPubkey},
+	"recipients": {"list recipients; recipients add|remove AGE_PUBLIC_KEY", runRecipients},
 }
 
 // Run executes one sopsy invocation and returns its exit code.

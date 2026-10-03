@@ -1,2 +1,5 @@
 # Test fixtures are byte-exact; a CRLF conversion would break them.
 internal/testutil/testdata/** -text
+
+# Golden files are compared byte for byte.
+internal/sopsconfig/testdata/** -text

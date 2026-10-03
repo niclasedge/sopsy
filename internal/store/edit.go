@@ -10,6 +10,8 @@ import (
 
 	"github.com/getsops/sops/v3"
 	"github.com/getsops/sops/v3/stores"
+
+	"github.com/niclasedge/sopsy/internal/atomicfile"
 )
 
 var validName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
@@ -78,16 +80,21 @@ func (p *Plain) Save() error {
 	if err != nil {
 		return err
 	}
-	current, err := os.ReadFile(p.file.Path)
+	return p.file.write(data)
+}
+
+// write replaces the file with data unless it changed on disk since Load.
+func (f *File) write(data []byte) error {
+	current, err := os.ReadFile(f.Path)
 	if err != nil {
 		return err
 	}
-	if sha256.Sum256(current) != p.file.hash {
-		return fmt.Errorf("%s: %w", p.file.Path, ErrChanged)
+	if sha256.Sum256(current) != f.hash {
+		return fmt.Errorf("%s: %w", f.Path, ErrChanged)
 	}
 	// Keep the line endings the file had, so a CRLF checkout stays CRLF.
 	if bytes.Contains(current, []byte("\r\n")) {
 		data = bytes.ReplaceAll(data, []byte("\n"), []byte("\r\n"))
 	}
-	return writeAtomic(p.file.Path, data, p.file.mode)
+	return atomicfile.Write(f.Path, data, f.mode)
 }
