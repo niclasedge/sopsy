@@ -34,3 +34,16 @@ Builds on the store from `add-init`. See proposal.md for motivation.
   to environment injection, documented in `docs/design.md` security model.
 - [Child ignores the forwarded signal] → sopsy waits; a second Ctrl+C is forwarded
   again, never escalated to kill by sopsy.
+
+## Implementation notes
+
+- **SIGINT from the terminal is not forwarded.** When sopsy is in the
+  foreground process group of its controlling terminal, Ctrl+C has already
+  reached the child from the kernel; forwarding it would deliver it twice, and
+  many programs treat a second interrupt as "force quit". A SIGINT sent to
+  sopsy alone (`kill -INT`, no terminal) is forwarded. SIGTERM and SIGHUP are
+  always forwarded.
+- `--` is optional: flag parsing stops at the first non-flag argument.
+  PowerShell 5.1 strips `--` when calling native commands.
+- Process tests use the test binary itself as sopsy (`SOPSY_TEST_MAIN=sopsy`)
+  and as the helper child, so they need no separate build.
