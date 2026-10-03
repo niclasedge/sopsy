@@ -53,6 +53,38 @@ jobs:
         env:
           SOPSY_REQUIRE_SOPS: "1"
 
+      # The real binary on a fresh, isolated home: init -> set -> run.
+      - name: End-to-end
+        run: |
+          set -euo pipefail
+          e2e="$RUNNER_TEMP/e2e"
+          bin="$e2e/sopsy"; [ "$RUNNER_OS" = Windows ] && bin="$bin.exe"
+          go build -o "$bin" .
+          mkdir -p "$e2e/project" && cd "$e2e/project"
+          export HOME="$e2e/home" APPDATA="$e2e/appdata"
+          unset XDG_CONFIG_HOME SOPS_AGE_KEY_FILE
+          value="e2e-value-$GITHUB_RUN_ID"
+
+          "$bin" init
+          printf '%s\n' "$value" | "$bin" set E2E_VALUE 2> set.err
+          out=$("$bin" run -- printenv E2E_VALUE 2> run.err)
+          test "$out" = "$value"
+          "$bin" keys | grep -qx E2E_VALUE
+          if grep -q "$value" set.err run.err; then echo "sopsy printed the value"; exit 1; fi
+          # init put the key where a bare sops finds it, without any variable.
+          sops decrypt --input-type dotenv --output-type dotenv secrets.env | grep -qx "E2E_VALUE=$value"
+
+      - name: End-to-end in PowerShell
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $e2e = Join-Path $env:RUNNER_TEMP 'e2e'
+          $env:APPDATA = Join-Path $e2e 'appdata'
+          Set-Location (Join-Path $e2e 'project')
+          $out = & (Join-Path $e2e 'sopsy.exe') run -- pwsh -NoProfile -Command '(Get-ChildItem env:E2E_VALUE).Value'
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          if ($out -ne "e2e-value-$env:GITHUB_RUN_ID") { Write-Error 'value did not reach the child'; exit 1 }
+
   lint:
     runs-on: ubuntu-latest
     steps:

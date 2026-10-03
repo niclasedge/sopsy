@@ -46,22 +46,51 @@ func (w *world) env() Env {
 		Stdin:      strings.NewReader(w.stdin),
 		Dir:        w.dir,
 		Getenv:     getenv,
+		Environ:    w.environ,
 		Keys:       keys.Env{GOOS: runtime.GOOS, Home: w.home, Getenv: getenv},
 		ReadSecret: w.prompt,
 	}
+}
+
+// environ is the real environment without anything SOPS- or sopsy-related,
+// plus the world's variables.
+func (w *world) environ() []string {
+	var out []string
+	for _, kv := range os.Environ() {
+		if !strings.HasPrefix(kv, "SOPS") {
+			out = append(out, kv)
+		}
+	}
+	for k, v := range w.vars {
+		out = append(out, k+"="+v)
+	}
+	return out
 }
 
 // run executes sopsy in the world and fails the test if any known secret
 // value appears in its output.
 func (w *world) run(args ...string) result {
 	w.t.Helper()
+	r := w.exec(args)
+	testutil.AssertNoSecret(w.t, r.stdout, r.stderr)
+	return r
+}
+
+// runChild executes a sopsy command that starts a child. The child's stdout
+// may contain secrets on purpose; sopsy's own stderr must not.
+func (w *world) runChild(args ...string) result {
+	w.t.Helper()
+	r := w.exec(args)
+	testutil.AssertNoSecret(w.t, r.stderr)
+	return r
+}
+
+func (w *world) exec(args []string) result {
 	var stdout, stderr bytes.Buffer
 	env := w.env()
 	env.Stdout, env.Stderr = &stdout, &stderr
 	code := Run(env, args)
-	r := result{stdout: stdout.String(), stderr: stderr.String(), code: code}
-	testutil.AssertNoSecret(w.t, r.stdout, r.stderr)
-	return r
+	return result{stdout: stdout.String(), stderr: stderr.String(), code: code}
 }
 
 // useTestKey points the world at the committed test-only key.
