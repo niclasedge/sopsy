@@ -1,0 +1,296 @@
+name: sopsy-world
+version: "0.1.0"
+taxonomy: world
+purpose: "The sopsy repo: where things live, how work flows, how the state is derived."
+files:
+  - path: world.md
+    role: orientation
+    summary: "Identity, routes and coverage map."
+  - path: boundaries.md
+    role: boundaries
+    summary: "What this world does not know or decide."
+  - path: workflow.md
+    role: world
+    summary: "Workflow: issue to OpenSpec change to PR, manual checks, public repo hygiene, conventions."
+  - path: testing.md
+    role: world
+    summary: "Testing: no-secret harness, isolation, sops compatibility, test-only key, web UI tests, test style."
+  - path: code.md
+    role: world
+    summary: "Code layout: packages, platform code, key lookup, errors and exit codes."
+  - path: stack.md
+    role: world
+    summary: "Software stack: libraries, tooling and CI, dependencies."
+  - path: release.md
+    role: world
+    summary: "Release: dry run, tagging, version stamping."
+atoms:
+  - id: coverage-map
+    address: world.md#coverage-map
+    taxonomy: world
+    regions: [identity, ontology, terrain, actors, laws, history, state, affordances]
+    situations: [fresh, handover, post-compaction]
+    purpose: width
+    runtime: any
+    order: 10
+    priority: core
+  - id: know-the-edges
+    address: boundaries.md
+    taxonomy: world
+    regions: [laws, state]
+    situations: [fresh, handover, post-compaction]
+    purpose: depth
+    runtime: any
+    order: 15
+    requires: [coverage-map]
+    priority: core
+  - id: workflow
+    address: workflow.md#auf-einen-blick
+    taxonomy: world
+    regions: [actors, laws, affordances, history]
+    situations: [handover]
+    purpose: width
+    runtime: any
+    order: 20
+    requires: [coverage-map]
+    priority: recommended
+  - id: workflow-issue-change-pr
+    address: workflow.md#issue-change-pr
+    taxonomy: world
+    regions: [laws, affordances]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 21
+    requires: [workflow]
+    priority: recommended
+  - id: workflow-manual-checks
+    address: workflow.md#manual-checks
+    taxonomy: world
+    regions: [laws]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 22
+    requires: [workflow]
+    priority: recommended
+  - id: workflow-public-repo-hygiene
+    address: workflow.md#public-repo-hygiene
+    taxonomy: world
+    regions: [laws]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 23
+    requires: [workflow]
+    priority: recommended
+  - id: workflow-conventions
+    address: workflow.md#conventions
+    taxonomy: world
+    regions: [laws]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 24
+    requires: [workflow]
+    priority: recommended
+  - id: testing
+    address: testing.md#auf-einen-blick
+    taxonomy: world
+    regions: [laws, terrain, affordances]
+    situations: [handover]
+    purpose: width
+    runtime: any
+    order: 30
+    requires: [coverage-map]
+    priority: recommended
+  - id: testing-no-secret-in-output
+    address: testing.md#no-secret-in-output
+    taxonomy: world
+    regions: [laws, terrain]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 31
+    requires: [testing]
+    priority: recommended
+  - id: testing-isolation
+    address: testing.md#isolation
+    taxonomy: world
+    regions: [laws, terrain]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 32
+    requires: [testing]
+    priority: recommended
+  - id: testing-sops-compatibility
+    address: testing.md#sops-compatibility
+    taxonomy: world
+    regions: [laws, terrain]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 33
+    requires: [testing]
+    priority: recommended
+  - id: testing-test-only-key
+    address: testing.md#test-only-key
+    taxonomy: world
+    regions: [laws]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 34
+    requires: [testing]
+    priority: recommended
+  - id: testing-web-ui-tests
+    address: testing.md#web-ui-tests
+    taxonomy: world
+    regions: [laws, terrain]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 35
+    requires: [testing]
+    priority: recommended
+  - id: testing-test-style
+    address: testing.md#test-style
+    taxonomy: world
+    regions: [laws]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 36
+    requires: [testing]
+    priority: recommended
+  - id: code
+    address: code.md#auf-einen-blick
+    taxonomy: world
+    regions: [terrain, ontology, laws]
+    situations: [handover]
+    purpose: width
+    runtime: any
+    order: 40
+    requires: [coverage-map]
+    priority: recommended
+  - id: code-packages
+    address: code.md#packages
+    taxonomy: world
+    regions: [terrain, ontology]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 41
+    requires: [code]
+    priority: recommended
+  - id: code-platform-code
+    address: code.md#platform-code
+    taxonomy: world
+    regions: [terrain, laws]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 42
+    requires: [code]
+    priority: recommended
+  - id: code-key-lookup
+    address: code.md#key-lookup
+    taxonomy: world
+    regions: [laws, terrain]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 43
+    requires: [code]
+    priority: recommended
+  - id: code-errors-and-exit-codes
+    address: code.md#errors-and-exit-codes
+    taxonomy: world
+    regions: [laws]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 44
+    requires: [code]
+    priority: recommended
+  - id: stack
+    address: stack.md#auf-einen-blick
+    taxonomy: world
+    regions: [ontology, terrain, laws]
+    situations: [handover]
+    purpose: width
+    runtime: any
+    order: 50
+    requires: [coverage-map]
+    priority: recommended
+  - id: stack-libraries
+    address: stack.md#libraries
+    taxonomy: world
+    regions: [ontology]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 51
+    requires: [stack]
+    priority: recommended
+  - id: stack-tooling-and-ci
+    address: stack.md#tooling-and-ci
+    taxonomy: world
+    regions: [terrain, laws, affordances]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 52
+    requires: [stack]
+    priority: recommended
+  - id: stack-dependencies
+    address: stack.md#dependencies
+    taxonomy: world
+    regions: [laws]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 53
+    requires: [stack]
+    priority: recommended
+  - id: release
+    address: release.md#auf-einen-blick
+    taxonomy: world
+    regions: [affordances, laws, state]
+    situations: [handover]
+    purpose: width
+    runtime: any
+    order: 60
+    requires: [coverage-map]
+    priority: recommended
+  - id: release-dry-run
+    address: release.md#dry-run
+    taxonomy: world
+    regions: [affordances]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 61
+    requires: [release]
+    priority: recommended
+  - id: release-tagging
+    address: release.md#tagging
+    taxonomy: world
+    regions: [affordances, laws]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 62
+    requires: [release]
+    priority: recommended
+  - id: release-version-stamping
+    address: release.md#version-stamping
+    taxonomy: world
+    regions: [terrain]
+    situations: [handover]
+    purpose: depth
+    runtime: any
+    order: 63
+    requires: [release]
+    priority: recommended
