@@ -2,6 +2,8 @@
 
 ## Auf einen Blick
 
+`just test` runs the suite; `just lint` checks without autofix; `just cov` writes `coverage/lcov.info`. File arguments select test or lint targets.
+
 Tests prove that no secret leaks, that nothing touches the developer's real
 home or key, and that files stay readable by the real `sops` CLI in both
 directions. CLI tests run through one harness; web UI tests call the handler

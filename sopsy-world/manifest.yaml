@@ -12,7 +12,7 @@ files:
   - path: workflow.md
     role: world
     summary: "Workflow: issue to OpenSpec change to PR, manual checks, public repo hygiene, conventions."
-  - path: testing.md
+  - path: test.md
     role: world
     summary: "Testing: no-secret harness, isolation, sops compatibility, test-only key, web UI tests, test style."
   - path: code.md
@@ -21,9 +21,12 @@ files:
   - path: stack.md
     role: world
     summary: "Software stack: libraries, tooling and CI, dependencies."
-  - path: release.md
+  - path: deploy.md
     role: world
     summary: "Release: dry run, tagging, version stamping."
+  - path: build.md
+    role: world
+    summary: "Build commands and source locations."
 atoms:
   - id: coverage-map
     address: world.md#coverage-map
@@ -94,8 +97,8 @@ atoms:
     order: 24
     requires: [workflow]
     priority: recommended
-  - id: testing
-    address: testing.md#auf-einen-blick
+  - id: test
+    address: test.md#auf-einen-blick
     taxonomy: world
     regions: [laws, terrain, affordances]
     situations: [handover]
@@ -104,65 +107,65 @@ atoms:
     order: 30
     requires: [coverage-map]
     priority: recommended
-  - id: testing-no-secret-in-output
-    address: testing.md#no-secret-in-output
+  - id: test-no-secret-in-output
+    address: test.md#no-secret-in-output
     taxonomy: world
     regions: [laws, terrain]
     situations: [handover]
     purpose: depth
     runtime: any
     order: 31
-    requires: [testing]
+    requires: [test]
     priority: recommended
-  - id: testing-isolation
-    address: testing.md#isolation
+  - id: test-isolation
+    address: test.md#isolation
     taxonomy: world
     regions: [laws, terrain]
     situations: [handover]
     purpose: depth
     runtime: any
     order: 32
-    requires: [testing]
+    requires: [test]
     priority: recommended
-  - id: testing-sops-compatibility
-    address: testing.md#sops-compatibility
+  - id: test-sops-compatibility
+    address: test.md#sops-compatibility
     taxonomy: world
     regions: [laws, terrain]
     situations: [handover]
     purpose: depth
     runtime: any
     order: 33
-    requires: [testing]
+    requires: [test]
     priority: recommended
-  - id: testing-test-only-key
-    address: testing.md#test-only-key
+  - id: test-test-only-key
+    address: test.md#test-only-key
     taxonomy: world
     regions: [laws]
     situations: [handover]
     purpose: depth
     runtime: any
     order: 34
-    requires: [testing]
+    requires: [test]
     priority: recommended
-  - id: testing-web-ui-tests
-    address: testing.md#web-ui-tests
+  - id: test-web-ui-tests
+    address: test.md#web-ui-tests
     taxonomy: world
     regions: [laws, terrain]
     situations: [handover]
     purpose: depth
     runtime: any
     order: 35
-    requires: [testing]
+    requires: [test]
     priority: recommended
-  - id: testing-test-style
-    address: testing.md#test-style
+  - id: test-test-style
+    address: test.md#test-style
     taxonomy: world
     regions: [laws]
     situations: [handover]
     purpose: depth
     runtime: any
     order: 36
-    requires: [testing]
+    requires: [test]
     priority: recommended
   - id: code
     address: code.md#auf-einen-blick
@@ -254,8 +257,8 @@ atoms:
     order: 53
     requires: [stack]
     priority: recommended
-  - id: release
-    address: release.md#auf-einen-blick
+  - id: deploy
+    address: deploy.md#auf-einen-blick
     taxonomy: world
     regions: [affordances, laws, state]
     situations: [handover]
@@ -264,33 +267,43 @@ atoms:
     order: 60
     requires: [coverage-map]
     priority: recommended
-  - id: release-dry-run
-    address: release.md#dry-run
+  - id: deploy-dry-run
+    address: deploy.md#dry-run
     taxonomy: world
     regions: [affordances]
     situations: [handover]
     purpose: depth
     runtime: any
     order: 61
-    requires: [release]
+    requires: [deploy]
     priority: recommended
-  - id: release-tagging
-    address: release.md#tagging
+  - id: deploy-tagging
+    address: deploy.md#tagging
     taxonomy: world
     regions: [affordances, laws]
     situations: [handover]
     purpose: depth
     runtime: any
     order: 62
-    requires: [release]
+    requires: [deploy]
     priority: recommended
-  - id: release-version-stamping
-    address: release.md#version-stamping
+  - id: deploy-version-stamping
+    address: deploy.md#version-stamping
     taxonomy: world
     regions: [terrain]
     situations: [handover]
     purpose: depth
     runtime: any
     order: 63
-    requires: [release]
+    requires: [deploy]
+    priority: recommended
+  - id: build
+    address: build.md#auf-einen-blick
+    taxonomy: world
+    regions: [affordances, terrain]
+    situations: [handover]
+    purpose: width
+    runtime: any
+    order: 150
+    requires: [coverage-map]
     priority: recommended

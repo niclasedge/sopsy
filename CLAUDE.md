@@ -11,9 +11,9 @@ commit messages, PR text, issue comments — is published.
 
 | Purpose | Command |
 |---|---|
-| Format + lint | `gofmt -l . && golangci-lint run ./...` |
+| Format + lint | `just lint` |
 | Vet | `go vet ./...` |
-| Tests (as CI) | `SOPSY_REQUIRE_SOPS=1 go test ./...` |
+| Tests (as CI) | `just test` |
 | Validate a change | `openspec validate <name> --strict` |
 
 All four must pass before pushing.
@@ -51,3 +51,5 @@ All four must pass before pushing.
 ## Entry
 
 World pack: `sopsy-world/world.md#coverage-map`. Read only the section the task needs.
+
+Checks: `just test`, `just lint`, `just cov`.
